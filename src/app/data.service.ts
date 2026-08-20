@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { createDemoSnapshot } from './demo-data';
-import { AttachmentMetadata, Procedure, ProcedureStep, ProcedureWorkload, Process, Relationship, Snapshot, WorkerEnvelope } from './models';
+import { AttachmentMetadata, DropdownValue, Procedure, ProcedureStep, ProcedureWorkload, Process, ProcessOwnerPosition, Snapshot, SupportingDocument, WorkerEnvelope } from './models';
 
 interface PendingRequest { resolve: (value: any) => void; reject: (reason: unknown) => void; }
 
@@ -40,6 +40,8 @@ export class DataService {
   }
 
   async saveProcess(process: Process): Promise<void> { this.apply(await this.request<WorkerEnvelope>('save-process', process)); }
+  async saveProcessOwnerPosition(position: ProcessOwnerPosition): Promise<void> { this.apply(await this.request<WorkerEnvelope>('save-process-owner-position', position)); }
+  async deleteProcessOwnerPosition(id: string): Promise<void> { this.apply(await this.request<WorkerEnvelope>('delete-process-owner-position', { id })); }
   async saveProcedure(procedure: Procedure): Promise<void> { this.apply(await this.request<WorkerEnvelope>('save-procedure', procedure)); }
   async deleteProcess(id: string): Promise<void> { this.apply(await this.request<WorkerEnvelope>('delete-process', { id })); }
   async deleteProcedure(id: string): Promise<void> { this.apply(await this.request<WorkerEnvelope>('delete-procedure', { id })); }
@@ -48,7 +50,10 @@ export class DataService {
   async saveProcedureStep(step: ProcedureStep): Promise<void> { this.apply(await this.request<WorkerEnvelope>('save-procedure-step', step)); }
   async deleteProcedureStep(id: string, procedureId: string, stepNumber: number): Promise<void> { this.apply(await this.request<WorkerEnvelope>('delete-procedure-step', { id, procedureId, stepNumber })); }
   async addAttachment(attachment: AttachmentMetadata): Promise<void> { this.apply(await this.request<WorkerEnvelope>('add-attachment', attachment)); }
-  async setRelationships(relationships: Relationship[]): Promise<void> { this.apply(await this.request<WorkerEnvelope>('set-relationships', relationships)); }
+  async saveSupportingDocument(document: SupportingDocument): Promise<void> { this.apply(await this.request<WorkerEnvelope>('save-supporting-document', document)); }
+  async deleteSupportingDocument(id: string, entityId: string): Promise<void> { this.apply(await this.request<WorkerEnvelope>('delete-supporting-document', { id, entityId })); }
+  async saveDropdownValue(value: DropdownValue): Promise<void> { this.apply(await this.request<WorkerEnvelope>('save-dropdown-value', value)); }
+  async deleteDropdownValue(id: string): Promise<void> { this.apply(await this.request<WorkerEnvelope>('delete-dropdown-value', { id })); }
   async importSnapshot(snapshot: Snapshot): Promise<void> { this.apply(await this.request<WorkerEnvelope>('import-state', snapshot)); }
 
   async exportSnapshot(): Promise<Snapshot> {

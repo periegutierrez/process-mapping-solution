@@ -1,5 +1,5 @@
 import { createDemoSnapshot } from './demo-data';
-import { AuditLog, AttachmentMetadata, EntityType, Procedure, ProcedureStep, ProcedureWorkload, Process, Relationship, Snapshot } from './models';
+import { AuditLog, AttachmentMetadata, DropdownValue, EntityType, Procedure, ProcedureStep, ProcedureWorkload, Process, ProcessOwnerPosition, Snapshot, SupportingDocument } from './models';
 
 type PersistenceMode = 'duckdb-opfs' | 'duckdb-memory' | 'memory-fallback';
 interface RequestMessage { id: number; action: string; payload?: any; }
@@ -32,6 +32,14 @@ async function handle(action: string, payload: any): Promise<any> {
       return envelope();
     case 'save-process':
       saveProcess(payload as Process);
+      await persist();
+      return envelope();
+    case 'save-process-owner-position':
+      saveProcessOwnerPosition(payload as ProcessOwnerPosition);
+      await persist();
+      return envelope();
+    case 'delete-process-owner-position':
+      snapshot.processOwnerPositions = snapshot.processOwnerPositions.filter((item) => item.id !== payload.id);
       await persist();
       return envelope();
     case 'delete-process':
@@ -69,8 +77,22 @@ async function handle(action: string, payload: any): Promise<any> {
       addAudit('CREATE', payload.entityType, payload.entityId, `Added attachment metadata: ${payload.fileName}`);
       await persist();
       return envelope();
-    case 'set-relationships':
-      snapshot.relationships = Array.isArray(payload) ? payload as Relationship[] : snapshot.relationships;
+    case 'save-supporting-document':
+      saveSupportingDocument(payload as SupportingDocument);
+      await persist();
+      return envelope();
+    case 'delete-supporting-document':
+      snapshot.supportingDocuments = snapshot.supportingDocuments.filter((item) => item.id !== payload.id);
+      addAudit('DELETE', 'process', payload.entityId, 'Deleted a supporting document link');
+      await persist();
+      return envelope();
+    case 'save-dropdown-value':
+      saveDropdownValue(payload as DropdownValue);
+      await persist();
+      return envelope();
+    case 'delete-dropdown-value':
+      snapshot.dropdownValues = snapshot.dropdownValues.filter((item) => item.id !== payload.id);
+      addAudit('DELETE', 'system', payload.id, 'Deleted a maintained dropdown value');
       await persist();
       return envelope();
     case 'import-state':
@@ -127,14 +149,16 @@ async function initializeDuckDb(): Promise<void> {
 
 function schemaSql(): string {
   return `
-    CREATE TABLE IF NOT EXISTS processes (id VARCHAR PRIMARY KEY, name VARCHAR, description VARCHAR, owner_id VARCHAR, status VARCHAR, created_by VARCHAR, created_at TIMESTAMP, updated_by VARCHAR, updated_at TIMESTAMP);
-    CREATE TABLE IF NOT EXISTS procedures (id VARCHAR PRIMARY KEY, name VARCHAR, description VARCHAR, process_id VARCHAR, platform_id VARCHAR, step_order INTEGER, created_by VARCHAR, created_at TIMESTAMP, updated_by VARCHAR, updated_at TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS processes (id VARCHAR PRIMARY KEY, name VARCHAR, description VARCHAR, parent_process_id VARCHAR, top_level_process_id VARCHAR, owner_id VARCHAR, owner_position_id VARCHAR, status VARCHAR, time_gap_value DOUBLE, time_gap_unit VARCHAR, created_by VARCHAR, created_at TIMESTAMP, updated_by VARCHAR, updated_at TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS process_owner_positions (id VARCHAR PRIMARY KEY, position VARCHAR, assigned_employee_id VARCHAR, created_at TIMESTAMP, updated_at TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS procedures (id VARCHAR PRIMARY KEY, name VARCHAR, description VARCHAR, process_id VARCHAR, process_order INTEGER, platform_id VARCHAR, transaction_volume INTEGER, transaction_frequency VARCHAR, duration_value DOUBLE, duration_unit VARCHAR, time_gap_value DOUBLE, time_gap_unit VARCHAR, created_by VARCHAR, created_at TIMESTAMP, updated_by VARCHAR, updated_at TIMESTAMP);
     CREATE TABLE IF NOT EXISTS procedure_workloads (id VARCHAR PRIMARY KEY, procedure_id VARCHAR, department_group VARCHAR, transaction_volume INTEGER, transaction_frequency VARCHAR, duration_value DOUBLE, duration_unit VARCHAR, created_at TIMESTAMP, updated_at TIMESTAMP);
     CREATE TABLE IF NOT EXISTS procedure_steps (id VARCHAR PRIMARY KEY, procedure_id VARCHAR, step_number INTEGER, title VARCHAR, description VARCHAR, resource_url VARCHAR, resource_type VARCHAR, created_at TIMESTAMP, updated_at TIMESTAMP);
     CREATE TABLE IF NOT EXISTS users (id VARCHAR PRIMARY KEY, name VARCHAR, email VARCHAR, role VARCHAR, status VARCHAR);
     CREATE TABLE IF NOT EXISTS platforms (id VARCHAR PRIMARY KEY, name VARCHAR, category VARCHAR);
-    CREATE TABLE IF NOT EXISTS process_relationships (id VARCHAR PRIMARY KEY, source_type VARCHAR, source_id VARCHAR, target_type VARCHAR, target_id VARCHAR, relation_type VARCHAR, created_at TIMESTAMP);
     CREATE TABLE IF NOT EXISTS attachments (id VARCHAR PRIMARY KEY, entity_type VARCHAR, entity_id VARCHAR, file_name VARCHAR, mime_type VARCHAR, file_size BIGINT, uploaded_by VARCHAR, uploaded_at TIMESTAMP, version INTEGER, storage_status VARCHAR);
+    CREATE TABLE IF NOT EXISTS supporting_documents (id VARCHAR PRIMARY KEY, entity_type VARCHAR, entity_id VARCHAR, title VARCHAR, url VARCHAR, resource_type VARCHAR, status VARCHAR, created_by VARCHAR, created_at TIMESTAMP, updated_by VARCHAR, updated_at TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS dropdown_values (id VARCHAR PRIMARY KEY, list_key VARCHAR, label VARCHAR, value VARCHAR, active BOOLEAN, created_at TIMESTAMP, updated_at TIMESTAMP);
     CREATE TABLE IF NOT EXISTS audit_logs (id VARCHAR PRIMARY KEY, action VARCHAR, entity_type VARCHAR, entity_id VARCHAR, summary VARCHAR, actor VARCHAR, created_at TIMESTAMP);
     CREATE TABLE IF NOT EXISTS app_state (key VARCHAR PRIMARY KEY, value JSON);
   `;
@@ -165,6 +189,12 @@ function saveProcess(process: Process): void {
   addAudit(existing ? 'UPDATE' : 'CREATE', 'process', process.id, `${existing ? 'Updated' : 'Created'} process ${process.name}`);
 }
 
+function saveProcessOwnerPosition(position: ProcessOwnerPosition): void {
+  const existing = snapshot.processOwnerPositions.some((item) => item.id === position.id);
+  snapshot.processOwnerPositions = existing ? snapshot.processOwnerPositions.map((item) => item.id === position.id ? position : item) : [position, ...snapshot.processOwnerPositions];
+  addAudit(existing ? 'UPDATE' : 'CREATE', 'system', position.id, `${existing ? 'Updated' : 'Created'} process owner position ${position.position}`);
+}
+
 function saveProcedure(procedure: Procedure): void {
   const existing = snapshot.procedures.some((item) => item.id === procedure.id);
   snapshot.procedures = existing ? snapshot.procedures.map((item) => item.id === procedure.id ? procedure : item) : [procedure, ...snapshot.procedures];
@@ -183,15 +213,31 @@ function saveProcedureStep(step: ProcedureStep): void {
   addAudit(existing ? 'UPDATE' : 'CREATE', 'procedure', step.procedureId, `${existing ? 'Updated' : 'Added'} step ${step.stepNumber}: ${step.title}`);
 }
 
+function saveSupportingDocument(document: SupportingDocument): void {
+  const existing = snapshot.supportingDocuments.some((item) => item.id === document.id);
+  snapshot.supportingDocuments = existing ? snapshot.supportingDocuments.map((item) => item.id === document.id ? document : item) : [document, ...snapshot.supportingDocuments];
+  addAudit(existing ? 'UPDATE' : 'CREATE', document.entityType, document.entityId, `${existing ? 'Updated' : 'Added'} supporting document ${document.title}`);
+}
+
+function saveDropdownValue(value: DropdownValue): void {
+  const existing = snapshot.dropdownValues.some((item) => item.id === value.id);
+  snapshot.dropdownValues = existing ? snapshot.dropdownValues.map((item) => item.id === value.id ? value : item) : [value, ...snapshot.dropdownValues];
+  addAudit(existing ? 'UPDATE' : 'CREATE', 'system', value.id, `${existing ? 'Updated' : 'Created'} dropdown value ${value.label}`);
+}
+
 function deleteEntity(type: EntityType, id: string): void {
   if (type === 'process') {
     const removed = snapshot.processes.find((item) => item.id === id);
-    snapshot.processes = snapshot.processes.filter((item) => item.id !== id);
+    const remainingProcesses = snapshot.processes.filter((item) => item.id !== id);
+    snapshot.processes = remainingProcesses.map((item) => {
+      if (item.parentProcessId === id) return { ...item, parentProcessId: null, topLevelProcessId: null };
+      return item.topLevelProcessId === id ? { ...item, topLevelProcessId: null } : item;
+    });
     snapshot.procedures = snapshot.procedures.filter((item) => item.processId !== id);
     const procedureIds = new Set(snapshot.procedures.filter((item) => item.processId !== id).map((item) => item.id));
     snapshot.procedureWorkloads = snapshot.procedureWorkloads.filter((item) => procedureIds.has(item.procedureId));
     snapshot.procedureSteps = snapshot.procedureSteps.filter((item) => procedureIds.has(item.procedureId));
-    snapshot.relationships = snapshot.relationships.filter((item) => !(item.sourceType === type && item.sourceId === id) && !(item.targetType === type && item.targetId === id));
+    snapshot.supportingDocuments = snapshot.supportingDocuments.filter((item) => !(item.entityType === type && item.entityId === id));
     snapshot.attachments = snapshot.attachments.filter((item) => !(item.entityType === type && item.entityId === id));
     addAudit('DELETE', type, id, `Deleted process ${removed?.name ?? id} and its linked records`);
   } else {
@@ -199,7 +245,7 @@ function deleteEntity(type: EntityType, id: string): void {
     snapshot.procedures = snapshot.procedures.filter((item) => item.id !== id);
     snapshot.procedureWorkloads = snapshot.procedureWorkloads.filter((item) => item.procedureId !== id);
     snapshot.procedureSteps = snapshot.procedureSteps.filter((item) => item.procedureId !== id);
-    snapshot.relationships = snapshot.relationships.filter((item) => !(item.sourceType === type && item.sourceId === id) && !(item.targetType === type && item.targetId === id));
+    snapshot.supportingDocuments = snapshot.supportingDocuments.filter((item) => !(item.entityType === type && item.entityId === id));
     snapshot.attachments = snapshot.attachments.filter((item) => !(item.entityType === type && item.entityId === id));
     addAudit('DELETE', type, id, `Deleted procedure ${removed?.name ?? id} and its linked records`);
   }
@@ -211,13 +257,9 @@ function addAudit(action: AuditLog['action'], entityType: AuditLog['entityType']
 
 function sanitizeSnapshot(input: Snapshot): Snapshot {
   const seed = createDemoSnapshot();
-  const procedures = Array.isArray(input?.procedures) ? input.procedures.map((item) => ({
-    ...item,
-    transactionVolume: typeof item.transactionVolume === 'number' && Number.isFinite(item.transactionVolume) ? item.transactionVolume : 0,
-    transactionFrequency: item.transactionFrequency ?? 'day',
-    durationValue: typeof item.durationValue === 'number' && Number.isFinite(item.durationValue) ? item.durationValue : 0,
-    durationUnit: item.durationUnit ?? 'minutes'
-  })) : seed.procedures;
+  const processOwnerPositions = Array.isArray(input?.processOwnerPositions) && input.processOwnerPositions.length ? input.processOwnerPositions : seed.processOwnerPositions;
+  const processes = Array.isArray(input?.processes) ? normalizeProcessHierarchy(input.processes, processOwnerPositions) : seed.processes;
+  const procedures = Array.isArray(input?.procedures) ? normalizeProcedureOrders(input.procedures, new Set(processes.map((item) => item.id))) : seed.procedures;
   const storedWorkloads = Array.isArray(input?.procedureWorkloads) ? input.procedureWorkloads : null;
   const containsOnlyLegacyGeneralWorkloads = Boolean(storedWorkloads?.length) && storedWorkloads!.every((item) => item.departmentGroup === 'General' && item.id === `wkl-${item.procedureId}`);
   const procedureWorkloads = storedWorkloads && !containsOnlyLegacyGeneralWorkloads
@@ -238,16 +280,66 @@ function sanitizeSnapshot(input: Snapshot): Snapshot {
       }];
     });
   return {
-    processes: Array.isArray(input?.processes) ? input.processes : seed.processes,
+    processes,
+    processOwnerPositions,
     procedures,
     procedureWorkloads,
     procedureSteps: Array.isArray(input?.procedureSteps) ? input.procedureSteps : seed.procedureSteps,
     users: Array.isArray(input?.users) ? input.users : seed.users,
     platforms: Array.isArray(input?.platforms) ? input.platforms : seed.platforms,
-    relationships: Array.isArray(input?.relationships) ? input.relationships : [],
     attachments: Array.isArray(input?.attachments) ? input.attachments : [],
+    supportingDocuments: Array.isArray(input?.supportingDocuments) ? input.supportingDocuments : seed.supportingDocuments,
+    dropdownValues: Array.isArray(input?.dropdownValues) && input.dropdownValues.length ? input.dropdownValues : seed.dropdownValues,
     auditLogs: Array.isArray(input?.auditLogs) ? input.auditLogs : []
   };
+}
+
+function normalizeProcessHierarchy(items: Process[], processOwnerPositions: ProcessOwnerPosition[]): Process[] {
+  const processIds = new Set(items.map((item) => item.id));
+  const rawById = new Map(items.map((item) => [item.id, item]));
+  const resolveTopLevelId = (id: string, visited = new Set<string>()): string => {
+    const item = rawById.get(id);
+    if (!item || visited.has(id)) return id;
+    if (item.topLevelProcessId && item.topLevelProcessId !== id && processIds.has(item.topLevelProcessId)) return item.topLevelProcessId;
+    if (!item.parentProcessId || !processIds.has(item.parentProcessId)) return id;
+    return resolveTopLevelId(item.parentProcessId, new Set([...visited, id]));
+  };
+  return items.map((item) => {
+    const parentProcessId = item.parentProcessId && item.parentProcessId !== item.id && processIds.has(item.parentProcessId) ? item.parentProcessId : null;
+    const resolvedTopLevelId = resolveTopLevelId(item.id);
+    const { sequenceOrder: _legacySequenceOrder, processOrder: _legacyProcessOrder, ...withoutLegacyOrder } = item as Process & { sequenceOrder?: number; processOrder?: number };
+    return {
+      ...withoutLegacyOrder,
+      parentProcessId,
+      topLevelProcessId: resolvedTopLevelId === item.id ? null : resolvedTopLevelId,
+      timeGapValue: typeof item.timeGapValue === 'number' && Number.isFinite(item.timeGapValue) ? Math.max(0, item.timeGapValue) : 0,
+      timeGapUnit: item.timeGapUnit ?? 'minutes',
+      ownerPositionId: item.ownerPositionId ?? processOwnerPositions.find((position) => position.assignedEmployeeId === item.ownerId)?.id ?? processOwnerPositions[0]?.id ?? null,
+      ownerId: item.ownerPositionId ?? processOwnerPositions.find((position) => position.assignedEmployeeId === item.ownerId)?.id ?? item.ownerId
+    };
+  });
+}
+
+function normalizeProcedureOrders(items: Procedure[], processIds: Set<string>): Procedure[] {
+  const nextOrderByProcess = new Map<string, number>();
+  return items.map((item) => {
+    const processId = item.processId && processIds.has(item.processId) ? item.processId : null;
+    const { sequenceOrder: _legacySequenceOrder, stepOrder: _legacyStepOrder, ...withoutLegacyOrder } = item as Procedure & { sequenceOrder?: number; stepOrder?: number };
+    const suppliedOrder = typeof item.processOrder === 'number' && Number.isFinite(item.processOrder) ? Math.max(1, Math.trunc(item.processOrder)) : null;
+    const processOrder = processId ? suppliedOrder ?? nextOrderByProcess.get(processId) ?? 1 : null;
+    if (processId && processOrder !== null) nextOrderByProcess.set(processId, Math.max(nextOrderByProcess.get(processId) ?? 1, processOrder + 1));
+    return {
+      ...withoutLegacyOrder,
+      processId,
+      processOrder,
+      transactionVolume: typeof item.transactionVolume === 'number' && Number.isFinite(item.transactionVolume) ? item.transactionVolume : 0,
+      transactionFrequency: item.transactionFrequency ?? 'day',
+      durationValue: typeof item.durationValue === 'number' && Number.isFinite(item.durationValue) ? item.durationValue : 0,
+      durationUnit: item.durationUnit ?? 'minutes',
+      timeGapValue: typeof item.timeGapValue === 'number' && Number.isFinite(item.timeGapValue) ? Math.max(0, item.timeGapValue) : 0,
+      timeGapUnit: item.timeGapUnit ?? 'minutes'
+    };
+  });
 }
 
 function envelope(): { snapshot: Snapshot; persistence: PersistenceMode; notice: string } {

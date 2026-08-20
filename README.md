@@ -33,20 +33,22 @@ The worker initializes the required relational tables and stores the v0.1 snapsh
 ## Implemented in v0.1
 
 - Responsive dashboard shell with process coverage, activity, register preview, and next-step cards.
-- Process CRUD with code, description, owner, status, timestamps, and validation.
-- Procedure CRUD with process link, platform, description, and timestamps.
-- Tabbed procedure editor: define procedure details first, then add ordered step-by-step instructions.
+- Process CRUD with code, description, owner position, time gap, timestamps, and validation.
+- Process hierarchy with optional direct parent and explicit top-level process assignment.
+- Process owner position maintenance with assigned employees, plus multiple supporting document/image links per process. Supporting-document status is maintained on each link rather than on the process.
+- Procedure CRUD with process link, platform, description, time gap, process-specific order, and timestamps.
+- Tabbed procedure editor: define procedure details first, then add numbered step-by-step instructions.
 - Department/group workload records: each procedure can define separate transaction volume and completion time for every using department or group.
-- Procedure CSV template download and filled-template upload with department/group workload rows, master-data, numeric, and step validation.
+- Procedure template download and filled-template upload with department/group workload rows, process order, time gap, master-data, numeric, and step validation.
 - Optional procedure-level and step-level resource links, each labelled as an image or document and opened in a new tab.
 - Step CRUD with required title/description, ordering, and per-step resource links.
 - Seeded user and platform master data used by the forms.
-- Normalized directed relationship model. A prerequisite points to its dependent; successions are the reverse view of the same edge.
-- Multiple dependency/succession selection for processes and procedures.
-- Client-side cycle detection before relationship changes are persisted.
+- Dropdown-value maintenance for supporting-document status, frequency, duration unit, and resource-link type lists.
+- Process containment model with optional direct parent and explicit top-level assignment.
+- Process editor controls for ordering assigned procedures; the same order is used in the process map and procedure register.
 - Worker-side CRUD/persistence boundary and DuckDB schema initialization.
 - OPFS persistence attempt with DuckDB memory and in-memory fallback states.
-- Relationship graph placeholder rendered from the normalized data contract, with an integration point for Cytoscape/D3.
+- Process map explorer that starts by asking for a top-level process, displays its processes and sub-processes, and loads procedures when a process is selected. Clicking a procedure opens a step-by-step modal.
 - Attachment metadata capture (name, type, size, uploader, timestamp, version) without storing the file blob yet.
 - Local audit-log records for create, update, delete, import, and export operations.
 - JSON snapshot import/export and sample-data reset.
@@ -58,8 +60,8 @@ The worker initializes the required relational tables and stores the v0.1 snapsh
 - Encryption-at-rest for PII and secure key management.
 - File/blob storage, attachment version replacement, and downloads.
 - Native `.duckdb` / Parquet archive export and restore. JSON export is the v0.1 interchange format.
-- Advanced graph interaction, layout, filtering, 500-node performance tuning, and PDF/CSV view export.
-- Full dependency matrix/heatmap analytics and backend-backed offline sync.
+- Advanced graph layouts, filtering, 500-node performance tuning, Cytoscape/D3 replacement, and PDF/CSV view export.
+- Full process analytics and backend-backed offline sync.
 
 ## Notes
 

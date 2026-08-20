@@ -5,3 +5,87 @@ html, body { margin: 0; min-height: 100%; }
 body { font-family: 'DM Sans', Arial, sans-serif; background: #f5f7fb; -webkit-font-smoothing: antialiased; }
 h1, h2, h3 { font-family: 'Space Grotesk', 'DM Sans', sans-serif; }
 button, input, textarea, select { font-family: inherit; }
+
+.graph-view > .graph-banner, .graph-view > .graph-panel { display: none !important; }
+.graph-start-panel { min-height: 360px; display: grid; place-items: center; padding: 42px 28px; text-align: center; }
+.graph-start-content { width: min(560px, 100%); }
+.graph-start-content h3 { margin: 8px 0; color: #253957; font-size: 24px; }
+.graph-start-content p { margin: 0 auto 24px; color: #778ba4; font-size: 12px; line-height: 1.6; max-width: 470px; }
+.graph-select-label { display: block; margin: 0 auto; max-width: 420px; text-align: left; color: #677b95; font-size: 10px; font-weight: 700; }
+.graph-select-label select { width: 100%; margin-top: 7px; padding: 12px; border: 1px solid #dce5f0; border-radius: 8px; background: #fff; color: #40536d; font: inherit; font-size: 12px; outline: 0; }
+.graph-select-label select:focus { border-color: #91acd8; box-shadow: 0 0 0 3px #91acd820; }
+.graph-explorer-panel { padding: 0 20px 25px; }
+.graph-explorer-toolbar { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 17px 3px; border-bottom: 1px solid #edf1f6; }
+.graph-breadcrumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
+.graph-breadcrumbs .section-kicker { margin-right: 5px; }
+.graph-breadcrumbs button { border: 0; background: transparent; color: #7891b6; cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; padding: 5px 7px; border-radius: 5px; }
+.graph-breadcrumbs button::after { content: ' /'; color: #c2cbd8; margin-left: 6px; }
+.graph-breadcrumbs button:last-child::after { content: ''; }
+.graph-breadcrumbs button.active { background: #edf3fb; color: #314d76; }
+.graph-nav-actions { display: flex; align-items: center; gap: 10px; }
+.graph-nav-actions .button { padding: 8px 10px; font-size: 10px; }
+.graph-focus-card { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin: 18px 3px 15px; padding: 14px 16px; border-radius: 9px; background: #f5f8fd; border: 1px solid #e5edf8; }
+.graph-focus-card strong, .graph-focus-card small { display: block; }
+.graph-focus-card strong { margin-top: 5px; color: #30496d; font-size: 14px; }
+.graph-focus-card small { margin-top: 4px; color: #8d9caf; font-size: 10px; }
+.graph-focus-hint { color: #8a9bb1; font-size: 10px; }
+.graph-explorer-canvas { min-height: 420px; }
+.graph-explorer-canvas .graph-node { cursor: pointer; outline: 0; }
+.graph-explorer-canvas .graph-node:hover rect, .graph-explorer-canvas .graph-node:focus rect { filter: brightness(.98); stroke-width: 2.5; }
+.graph-explorer-canvas .graph-node.focus-node rect { fill: #dceaff; stroke: #527dbd; stroke-width: 2.5; }
+.graph-explorer-canvas .graph-node.focus-node.procedure-node rect { fill: #ffe3d5; stroke: #d97959; }
+.graph-connections { margin-top: 22px; }
+.graph-connected-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.graph-connected-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 12px; border: 1px solid #e6ebf2; border-radius: 8px; background: #fff; color: #536a89; cursor: pointer; text-align: left; }
+.graph-connected-item:hover { background: #f7faff; border-color: #c9d9ef; }
+.graph-connected-item > span:nth-child(2) { flex: 1; min-width: 0; }
+.graph-connected-item strong, .graph-connected-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.graph-connected-item strong { color: #405975; font-size: 11px; }
+.graph-connected-item small { margin-top: 4px; color: #98a6b7; font-size: 9px; }
+.graph-connected-item > b { color: #ed8068; font-size: 16px; }
+.graph-node-badge { flex: 0 0 auto; padding: 4px 6px; border-radius: 4px; background: #edf3fb; color: #6d8dbc; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.graph-node-badge.procedure-badge { background: #fff0e8; color: #d57f61; }
+@media (max-width: 720px) { .graph-explorer-toolbar, .graph-focus-card { align-items: flex-start; flex-direction: column; }.graph-nav-actions { width: 100%; justify-content: space-between; }.graph-connected-list { grid-template-columns: 1fr; }.graph-start-panel { min-height: 300px; padding: 30px 20px; } }
+
+.process-view-marker, .procedure-view-marker { display: none; }
+.overview-view .kpi-card.accent-green, .overview-view .coverage-panel { display: none; }
+.overview-view .process-preview th:nth-child(3), .overview-view .process-preview td:nth-child(3) { display: none; }
+.register-view:has(.process-view-marker) .wide-table th:nth-child(3), .register-view:has(.process-view-marker) .wide-table td:nth-child(3) { display: none; }
+.register-view:has(.process-view-marker) .filter-note { visibility: hidden; }
+.register-view:has(.process-view-marker) .filter-note::after { content: 'Search includes owner and relationships'; visibility: visible; margin-left: -100%; }
+.register-view:has(.process-view-marker) .editor-panel label:has(select[formcontrolname="ownerId"]), .register-view:has(.process-view-marker) .editor-panel label:has(select[formcontrolname="status"]) { display: none; }
+.register-view:has(.process-view-marker) .editor-panel .attachment-strip { display: none; }
+.register-view:has(.process-view-marker) .editor-hint p { font-size: 0; }
+.register-view:has(.process-view-marker) .editor-hint p::after { content: 'Choose a row to edit the owner position, supporting documents, and relationships.'; font-size: 11px; }
+.register-view:has(.procedure-view-marker) .template-actions, .register-view:has(.procedure-view-marker) .template-guidance, .register-view:has(.procedure-view-marker) .template-error { display: none; }
+.process-governance-panel, .excel-template-panel, .validation-panel { margin-top: 15px; padding: 0 22px 22px; }
+.process-owner-field, .supporting-documents-section { border-top: 1px solid #edf0f5; padding-top: 16px; }
+.process-owner-field { max-width: 470px; }
+.process-owner-field select { max-width: 470px; }
+.supporting-documents-section { margin-top: 18px; }
+.supporting-document-list { display: grid; gap: 8px; margin-top: 11px; }
+.supporting-document-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 12px; border: 1px solid #e6ebf2; border-radius: 8px; background: #fbfcfe; }
+.supporting-document-row strong, .supporting-document-row small, .supporting-document-row a { display: block; }
+.supporting-document-row strong { color: #405975; font-size: 11px; }
+.supporting-document-row small { margin-top: 4px; color: #8f9eaf; font-size: 9px; }
+.supporting-document-row a { margin-top: 6px; color: #5f83ba; font-size: 10px; max-width: 480px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.supporting-document-actions, .maintenance-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+.supporting-document-form, .maintenance-form { display: grid; gap: 11px; margin-top: 14px; }
+.required-mark { color: #d86c5a; font-weight: 800; }
+.required-field { color: #677b95; font-size: 10px; font-weight: 700; }
+.editor-panel label:not(.required-field):has(input[formcontrolname="code"])::after, .editor-panel label:not(.required-field):has(input[formcontrolname="name"])::after, .editor-panel label:not(.required-field):has(textarea[formcontrolname="description"])::after, .editor-panel label:not(.required-field):has(select[formcontrolname="platformId"])::after, .editor-panel label:not(.required-field):has(input[formcontrolname="departmentGroup"])::after, .editor-panel label:not(.required-field):has(input[formcontrolname="transactionVolume"])::after, .editor-panel label:not(.required-field):has(select[formcontrolname="transactionFrequency"])::after, .editor-panel label:not(.required-field):has(input[formcontrolname="durationValue"])::after, .editor-panel label:not(.required-field):has(select[formcontrolname="durationUnit"])::after, .editor-panel label:not(.required-field):has(input[formcontrolname="stepNumber"])::after, .editor-panel label:not(.required-field):has(input[formcontrolname="title"])::after, .editor-panel label:not(.required-field):has(textarea[formcontrolname="description"])::after { content: ' *'; color: #d86c5a; font-weight: 800; }
+.editor-panel input.ng-invalid.ng-touched, .editor-panel textarea.ng-invalid.ng-touched, .editor-panel select.ng-invalid.ng-touched, .process-governance-panel input.ng-invalid.ng-touched, .process-governance-panel select.ng-invalid.ng-touched, .maintenance-panel input.ng-invalid.ng-touched, .maintenance-panel select.ng-invalid.ng-touched { border-color: #d86c5a !important; background: #fff9f7; }
+.required-summary, .validation-panel { color: #c66755; background: #fff2ee; border: 1px solid #f4d5cd; border-radius: 8px; padding: 10px 12px; font-size: 10px; }
+.excel-template-panel { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.excel-template-panel h3 { margin: 5px 0; color: #30496d; font-size: 15px; }
+.excel-template-panel p { margin: 0; color: #8a9aaf; font-size: 10px; }
+.excel-template-panel .template-error { flex-basis: 100%; }
+.maintenance-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
+.maintenance-panel { padding-bottom: 17px; }
+.maintenance-list { padding: 0 22px; max-height: 240px; overflow-y: auto; }
+.maintenance-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; border-bottom: 1px solid #eef1f5; }
+.maintenance-row strong, .maintenance-row small { display: block; }
+.maintenance-row strong { color: #415670; font-size: 11px; }
+.maintenance-row small { color: #9ca8b6; font-size: 9px; margin-top: 3px; }
+.maintenance-panel > .maintenance-form { margin: 0 22px; }
+@media (max-width: 900px) { .maintenance-grid { grid-template-columns: 1fr; }.excel-template-panel { align-items: flex-start; flex-direction: column; } }
